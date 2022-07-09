@@ -114,23 +114,6 @@ def generate_H_v(H_v_delta, dimension):
     return H_v
 
 
-# def generate_hypotheses(H_1_size, H_2_size):
-#     '''
-#
-#     :param H_1_size: size of hypothesis set H_1
-#     :param H_2_size: size of hypothesis set H_2
-#     :return: shape=(H_1_size * H_2_size, 2)
-#              All possible pairs of H_1 X H_2.
-#              Cartesian product of [1,..,H_1_size] X [1,...,H_2_size]
-#     '''
-#
-#     H_1_indices = np.array(np.arange(H_1_size))
-#     H_2_indices = np.array(np.arange(H_2_size))
-#     H_indices = cartesian_product_transpose([H_1_indices, H_2_indices])
-#     print(f'Total number of hypotheses: {H_1_size * H_2_size}')
-#     return H_indices
-
-
 def choose_concept(H_1_size, H_2_size, rng):
     '''
     :param H_1_size: size of H_1
@@ -172,14 +155,17 @@ def flip_labels(labels, p, rng):
     labels[flip_samples_indices] = - labels[flip_samples_indices]
 
 
-def generate_instance(c_v, labels, dimension, N, pos_sample_num, neg_sample_num, rng, figname=""):
+def generate_instance(c_v, dimension, N, pos_sample_num, neg_sample_num, rng, figname="", **kwargs):
     '''
-    generate random instances by normalizing the length of a
-    vector of random-normal values (these distribute evenly on ball).
+    default: uniform distribution on unit sphere
+        'cube': uniform distribution in unit cube
+        'rect': uniform distribution in rectangular
+        'ball': uniform distribution in ball
     :param c_v: concept of view v
-    :param labels: labels of all samples before flipping
     :param dimension: dimension of instance space
     :param N: number of samples
+    :param pos_sample_num: num of positive samples
+    :param neg_sample_num: num of negative samples
     :param rng: random number generator
     :param figname: name of figure
     :return: samples in view v
@@ -189,14 +175,26 @@ def generate_instance(c_v, labels, dimension, N, pos_sample_num, neg_sample_num,
     neg_sample_count = 0
 
     while pos_sample_count < pos_sample_num or neg_sample_count < neg_sample_num:
-        random_vectors = rng.standard_normal(size=(N//2, dimension))
+        if kwargs["distribution"] == "cube":
+            random_vectors = rng.uniform(-1, 1, size=(N // 2, dimension))
+        elif kwargs["distribution"] == "ball":
+            random_vectors = rng.standard_normal(size=(N // 2, dimension))
+            random_vectors = normalize(random_vectors, axis=1, norm='l2')
+            radius = np.power(rng.uniform(0, 1, N//2), 1/dimension)
+            random_vectors *= np.expand_dims(radius, 0).T
+        else:
+            random_vectors = rng.standard_normal(size=(N // 2, dimension))
+            random_vectors = normalize(random_vectors, axis=1, norm='l2')
+
         c_v_pre = np.sign(np.matmul(random_vectors, c_v.T))
+
         if pos_sample_count >= pos_sample_num:
             ...
         else:
             pos_samples_indices = np.nonzero(c_v_pre > 0)[0]
             pos_end = min(pos_sample_num, pos_sample_count + pos_samples_indices.shape[0])
-            samples[pos_sample_count:pos_end, :] = normalize(random_vectors[pos_samples_indices[0:pos_end - pos_sample_count], :], axis=1, norm='l2')
+
+            samples[pos_sample_count:pos_end, :] = random_vectors[pos_samples_indices[0:pos_end - pos_sample_count], :]
             pos_sample_count = pos_end
 
         if neg_sample_count >= neg_sample_num:
@@ -205,22 +203,24 @@ def generate_instance(c_v, labels, dimension, N, pos_sample_num, neg_sample_num,
             start_neg_sample_index = pos_sample_num + neg_sample_count
             neg_samples_indices = np.nonzero(c_v_pre < 0)[0]
             neg_end = min(neg_sample_num + pos_sample_num, start_neg_sample_index + neg_samples_indices.shape[0])
-            samples[start_neg_sample_index:neg_end, :] = normalize(random_vectors[neg_samples_indices[0:neg_end - start_neg_sample_index], :], axis=1, norm='l2')
+            samples[start_neg_sample_index:neg_end, :] = random_vectors[neg_samples_indices[0:neg_end - start_neg_sample_index], :]
             neg_sample_count = neg_end - pos_sample_num
 
-    if figname == "./X_1_concept":
-        plt.figure(1)
-    else:
-        plt.figure(2)
-
-    plt.scatter(samples[0:pos_sample_num, 0], samples[0:pos_sample_num, 1], color='red')
-    plt.scatter(samples[pos_sample_num:, 0], samples[pos_sample_num:, 1], color='blue')
-    if abs(c_v[0]/c_v[1]) < 2:
-        plt.plot([1.1, -1.1], [-1.1 * c_v[0] / c_v[1], 1.1 * c_v[0] / c_v[1]], color='black')
-    else:
-        plt.plot([-1.1 * c_v[1] / c_v[0], 1.1 * c_v[1] / c_v[0]], [1.1, -1.1], color='black')
-    plt.arrow(0, 0, c_v[0]/2, c_v[1]/2, head_width=0.05, color='red')
-    plt.savefig(figname)
+    # if figname == "./X_1_concept":
+    #     plt.figure(1)
+    # else:
+    #     plt.figure(2)
+    #
+    # plt.scatter(samples[0:pos_sample_num, 0], samples[0:pos_sample_num, 1], color='red')
+    # plt.scatter(samples[pos_sample_num:, 0], samples[pos_sample_num:, 1], color='blue')
+    # if abs(c_v[0]/c_v[1]) < 2:
+    #     plt.plot([1.1, -1.1], [-1.1 * c_v[0] / c_v[1], 1.1 * c_v[0] / c_v[1]], color='black')
+    # else:
+    #     plt.plot([-1.1 * c_v[1] / c_v[0], 1.1 * c_v[1] / c_v[0]], [1.1, -1.1], color='black')
+    # plt.arrow(0, 0, c_v[0]/2, c_v[1]/2, head_width=0.05, color='red')
+    # # plt.savefig(figname)
+    #
+    # plt.show()
 
     return samples
 
@@ -367,8 +367,8 @@ def algorithm_1(X_1, X_2, labels, H_1, H_2, beta, delta, rng):
     error = cal_h_err(h_1, h_2, X_1, X_2, labels)
 
     print(f"find h_out with error er(h_out) = {error}.")
-    plot_statistics(statistics_record)
 
+    return statistics_record
     # return h_1, h_2
 
 
@@ -430,13 +430,14 @@ def main():
 
     c_1_index, c_2_index = choose_concept(H_1.shape[0], H_2.shape[0], rng)
     labels, pos_sample_num, neg_sample_num = generate_labels(sample_N, pos_p, rng)
-    X_1 = generate_instance(H_1[c_1_index, :], labels, dimension_1, sample_N, pos_sample_num, neg_sample_num, rng, "./X_1_concept")
-    X_2 = generate_instance(H_2[c_2_index, :], labels, dimension_2, sample_N, pos_sample_num, neg_sample_num, rng, "./X_2_concept")
-    # beta = min(alpha*eps/2, eps)
+    X_1 = generate_instance(H_1[c_1_index, :], dimension_1, sample_N, pos_sample_num, neg_sample_num, rng, "./X_1_concept", distribution="ball")
+    X_2 = generate_instance(H_2[c_2_index, :], dimension_2, sample_N, pos_sample_num, neg_sample_num, rng, "./X_2_concept", distribution="ball")
+
     flip_labels(labels, flip_p, rng)
     beta = eps
-    algorithm_1(X_1, X_2, labels, H_1, H_2, beta, 1 - confidence, rng)
-    # test_accuracy(h_1, h_2, X_1, X_2, labels)
+    statistics_record = algorithm_1(X_1, X_2, labels, H_1, H_2, beta, 1 - confidence, rng)
+    # plot_statistics(statistics_record)
+
 
 if __name__ == '__main__':
     main()
