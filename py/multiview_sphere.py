@@ -1,4 +1,3 @@
-import numpy
 import numpy as np
 from numpy.random import default_rng
 from sklearn.preprocessing import normalize
@@ -60,11 +59,11 @@ round_point_approx = 0.0000001
 
 
 def cartesian_product_transpose(arrays):
-    broadcastable = numpy.ix_(*arrays)
-    broadcasted = numpy.broadcast_arrays(*broadcastable)
-    rows, cols = numpy.prod(broadcasted[0].shape), len(broadcasted)
-    dtype = numpy.result_type(*arrays)
-    out = numpy.empty(rows * cols, dtype=dtype)
+    broadcastable = np.ix_(*arrays)
+    broadcasted = np.broadcast_arrays(*broadcastable)
+    rows, cols = np.prod(broadcasted[0].shape), len(broadcasted)
+    dtype = np.result_type(*arrays)
+    out = np.empty(rows * cols, dtype=dtype)
     start, end = 0, rows
     for a in broadcasted:
         out[start:end] = a.reshape(-1)
@@ -81,8 +80,8 @@ def generate_H_v(H_v_delta, dimension):
     H_i : numpy array of size: H_i_size * dimension
     '''
 
-    H_v = numpy.ones(shape=(H_v_delta ** (dimension - 1), dimension))
-    H_v_polar = numpy.zeros(shape=(H_v_delta, dimension - 1))
+    H_v = np.ones(shape=(H_v_delta ** (dimension - 1), dimension))
+    H_v_polar = np.zeros(shape=(H_v_delta, dimension - 1))
 
     # Generate hypothesis by rotating unit vector in polar coordinates
     for i in range(dimension - 2):
