@@ -261,6 +261,99 @@ def cal_h_err(h_1, h_2, X_1, X_2, labels):
     return error
 
 
+# def algorithm_1(X_1, X_2, labels, H_1, H_2, beta, delta, rng):
+#     '''
+#     :param X_1: shape=(sample_N, dimension) instances in view 1
+#     :param X_2: shape=(sample_N, dimension) instances in view 2
+#     :param H_1: shape=(sample_N, dimension) hypotheses in view 1
+#     :param H_2: shape=(sample_N, dimension) hypotheses in view 2
+#     :param labels: labels of all samples
+#     :param beta:
+#     :param delta:
+#     :param unlabeled_samples_batch: batch size of unlabeled samples
+#     :return: hypothesis indices of h_1 and h_2
+#     '''
+#
+#     '''
+#     k = H_s[x] where k = H_2.size * i + j
+#     represents the hypothesis (j,i)
+#     H_s : shape = (H_1.size * H_2.size,)
+#     '''
+#     H_s = np.full(H_1.shape[0] * H_2.shape[0], True)
+#     H_s = np.nonzero(H_s == True)[0]
+#
+#     unlabeled_samples_num = np.log(H_s.size) / beta * np.log(1 / (beta * delta)) / 50
+#     unlabeled_samples_num = int(unlabeled_samples_num//unlabeled_samples_batch * unlabeled_samples_batch)
+#
+#     '''
+#     statistics_record : shape (6, total_iterations)
+#     size of H_s
+#     average error of h in H_s
+#     Number of h in H_s where er(h)<0.5
+#     Average error of good h in H_s
+#     Number of h in H_s where er(h)>=0.5
+#     Average error of bad h in H_s
+#     '''
+#     statistics_record = np.zeros(shape=(6, unlabeled_samples_num//unlabeled_samples_batch - 1))
+#
+#     for iteration, unlabeled_samples_count in enumerate(range(unlabeled_samples_init, unlabeled_samples_num, unlabeled_samples_batch)):
+#         print("\n-----------------\nThe {}-th iteration\n-----------------".format(iteration))
+#         print("Current number of unlabeled samples are {}.".format(unlabeled_samples_count))
+#
+#         unlabeled_samples_indices = rng.integers(X_1.shape[0], size=unlabeled_samples_batch)
+#
+#         for h_s_index, h_index in enumerate(H_s):
+#             h_1_index = h_index % H_2.shape[0]
+#             h_2_index = h_index // H_2.shape[0]
+#             h_1, h_2 = H_1[h_1_index, :], H_2[h_2_index, :]
+#             h_1_unlabeled_pre = np.sign(np.matmul(X_1[unlabeled_samples_indices, :], h_1.T))
+#             h_2_unlabeled_pre = np.sign(np.matmul(X_2[unlabeled_samples_indices, :], h_2.T))
+#
+#             if not np.array_equal(h_1_unlabeled_pre, h_2_unlabeled_pre):
+#                 H_s[h_s_index] = -1
+#
+#         # update H_s and initialize error_list
+#         H_s = H_s[np.nonzero(H_s > 0)]
+#         error_list = np.zeros(H_s.shape[0])
+#         for h_s_index, h_index in enumerate(H_s):
+#             h_1_index = h_index % H_2.shape[0]
+#             h_2_index = h_index // H_2.shape[0]
+#             h_1, h_2 = H_1[h_1_index, :], H_2[h_2_index, :]
+#
+#             error_list[h_s_index] = cal_h_err(h_1, h_2, X_1, X_2, labels)
+#
+#         statistics_record[0, iteration] = H_s.shape[0]
+#         statistics_record[1, iteration] = np.average(error_list)
+#         statistics_record[2, iteration] = np.nonzero(error_list < 0.5)[0].size
+#         statistics_record[3, iteration] = safe_div(np.sum(error_list[error_list < 0.5]), statistics_record[2, iteration])
+#         statistics_record[4, iteration] = np.nonzero(error_list >= 0.5)[0].size
+#         statistics_record[5, iteration] = safe_div(np.sum(error_list[error_list >= 0.5]), statistics_record[4, iteration])
+#
+#         print(f"The size of H_s is {statistics_record[0, iteration]: .0f}.")
+#         print(f"Average error of h in H_s is {statistics_record[1, iteration]}.")
+#         print(f"Number of h in H_s where er(h) < 0.5 is {statistics_record[2, iteration]: .0f}.")
+#         print(f"Average error of good h in H_s is {statistics_record[3, iteration]}.")
+#         print(f"Number of h in H_s where er(h) >= 0.5 is {statistics_record[4, iteration]: .0f}.")
+#         print(f"Average error of bad h in H_s is {statistics_record[5, iteration]}.")
+#
+#     labeled_samples_indices = rng.integers(X_1.shape[0], size=budget)
+#     requested_labels = labels[labeled_samples_indices]
+#     labeled_x_1 = X_1[labeled_samples_indices, :]
+#     labeled_x_2 = X_2[labeled_samples_indices, :]
+#
+#     chosen_hypothesis_H_s_index = choose_hypothesis(H_s, H_1, H_2, labeled_x_1, labeled_x_2, requested_labels)
+#
+#     h_index = H_s[chosen_hypothesis_H_s_index]
+#     h_1_index = h_index % H_2.shape[0]
+#     h_2_index = h_index // H_2.shape[0]
+#     h_1, h_2 = H_1[h_1_index, :], H_2[h_2_index, :]
+#     error = cal_h_err(h_1, h_2, X_1, X_2, labels)
+#
+#     print(f"find h_out with error er(h_out) = {error}.")
+#
+#     return statistics_record
+
+
 def algorithm_1(X_1, X_2, labels, H_1, H_2, beta, delta, rng):
     '''
     :param X_1: shape=(sample_N, dimension) instances in view 1
@@ -282,66 +375,60 @@ def algorithm_1(X_1, X_2, labels, H_1, H_2, beta, delta, rng):
     H_s = np.full(H_1.shape[0] * H_2.shape[0], True)
     H_s = np.nonzero(H_s == True)[0]
 
-    unlabeled_samples_num = np.log(H_s.size) / beta * np.log(1 / (beta * delta)) / 50
-    unlabeled_samples_num = int(unlabeled_samples_num//unlabeled_samples_batch * unlabeled_samples_batch)
+    unlabeled_samples_num = int(np.log(H_s.size) / beta * np.log(1 / (beta * delta)) / 50)
+
+    print("Current number of unlabeled samples are {}.".format(unlabeled_samples_init))
+
+    unlabeled_samples_indices = rng.integers(X_1.shape[0], size=unlabeled_samples_num)
 
     '''
-    statistics_record : shape (6, total_iterations)
-    size of H_s
-    average error of h in H_s
-    Number of h in H_s where er(h)<0.5
-    Average error of good h in H_s
-    Number of h in H_s where er(h)>=0.5
-    Average error of bad h in H_s
+        Obtain H_s
     '''
-    statistics_record = np.zeros(shape=(6, unlabeled_samples_num//unlabeled_samples_batch - 1))
+    for h_s_index, h_index in enumerate(H_s):
+        h_1_index = h_index % H_2.shape[0]
+        h_2_index = h_index // H_2.shape[0]
+        h_1, h_2 = H_1[h_1_index, :], H_2[h_2_index, :]
+        h_1_unlabeled_pre = np.sign(np.matmul(X_1[unlabeled_samples_indices, :], h_1.T))
+        h_2_unlabeled_pre = np.sign(np.matmul(X_2[unlabeled_samples_indices, :], h_2.T))
 
-    for iteration, unlabeled_samples_count in enumerate(range(unlabeled_samples_init, unlabeled_samples_num, unlabeled_samples_batch)):
-        print("\n-----------------\nThe {}-th iteration\n-----------------".format(iteration))
-        print("Current number of unlabeled samples are {}.".format(unlabeled_samples_count))
-
-        unlabeled_samples_indices = rng.integers(X_1.shape[0], size=unlabeled_samples_batch)
-
-        for h_s_index, h_index in enumerate(H_s):
-            h_1_index = h_index % H_2.shape[0]
-            h_2_index = h_index // H_2.shape[0]
-            h_1, h_2 = H_1[h_1_index, :], H_2[h_2_index, :]
-            h_1_unlabeled_pre = np.sign(np.matmul(X_1[unlabeled_samples_indices, :], h_1.T))
-            h_2_unlabeled_pre = np.sign(np.matmul(X_2[unlabeled_samples_indices, :], h_2.T))
-
-            if not np.array_equal(h_1_unlabeled_pre, h_2_unlabeled_pre):
-                H_s[h_s_index] = -1
+        if not np.array_equal(h_1_unlabeled_pre, h_2_unlabeled_pre):
+            H_s[h_s_index] = -1
 
         # update H_s and initialize error_list
-        H_s = H_s[np.nonzero(H_s > 0)]
-        error_list = np.zeros(H_s.shape[0])
-        for h_s_index, h_index in enumerate(H_s):
+    H_s = H_s[np.nonzero(H_s > 0)]
+
+    print("Current size of H_s is {}.".format(H_s.shape[0]))
+    '''
+        statistics_record : shape (1, budget)
+        average error of h_out after requesting x labels
+    '''
+    statistics_record = np.zeros(shape=(1, budget))
+
+    for labels_num in range(1, budget+1):
+        labeled_samples_indices = rng.integers(X_1.shape[0], size=labels_num)
+        requested_labels = labels[labeled_samples_indices]
+        labeled_x_1 = X_1[labeled_samples_indices, :]
+        labeled_x_2 = X_2[labeled_samples_indices, :]
+
+        for i in range(100):
+            chosen_hypothesis_H_s_index = choose_hypothesis(H_s, H_1, H_2, labeled_x_1, labeled_x_2, requested_labels)
+
+            h_index = H_s[chosen_hypothesis_H_s_index]
             h_1_index = h_index % H_2.shape[0]
             h_2_index = h_index // H_2.shape[0]
             h_1, h_2 = H_1[h_1_index, :], H_2[h_2_index, :]
+            error = cal_h_err(h_1, h_2, X_1, X_2, labels)
+            statistics_record[0, labels_num - 1] += error/100
 
-            error_list[h_s_index] = cal_h_err(h_1, h_2, X_1, X_2, labels)
+    plt.plot(range(1,budget+1), statistics_record[0, :])
+    plt.xlabel('labeled samples')
+    plt.ylabel('average error of h_out')
+    plt.show()
 
-        statistics_record[0, iteration] = H_s.shape[0]
-        statistics_record[1, iteration] = np.average(error_list)
-        statistics_record[2, iteration] = np.nonzero(error_list < 0.5)[0].size
-        statistics_record[3, iteration] = safe_div(np.sum(error_list[error_list < 0.5]), statistics_record[2, iteration])
-        statistics_record[4, iteration] = np.nonzero(error_list >= 0.5)[0].size
-        statistics_record[5, iteration] = safe_div(np.sum(error_list[error_list >= 0.5]), statistics_record[4, iteration])
 
-        print(f"The size of H_s is {statistics_record[0, iteration]: .0f}.")
-        print(f"Average error of h in H_s is {statistics_record[1, iteration]}.")
-        print(f"Number of h in H_s where er(h) < 0.5 is {statistics_record[2, iteration]: .0f}.")
-        print(f"Average error of good h in H_s is {statistics_record[3, iteration]}.")
-        print(f"Number of h in H_s where er(h) >= 0.5 is {statistics_record[4, iteration]: .0f}.")
-        print(f"Average error of bad h in H_s is {statistics_record[5, iteration]}.")
 
-    labeled_samples_indices = rng.integers(X_1.shape[0], size=budget)
-    requested_labels = labels[labeled_samples_indices]
-    labeled_x_1 = X_1[labeled_samples_indices, :]
-    labeled_x_2 = X_2[labeled_samples_indices, :]
+def choose_hypothesis(H_s, H_1, H_2, labeled_x_1, labeled_x_2, requested_labels):
     error_list = np.zeros(shape=H_s.size)
-
     for h_s_index, h_index in enumerate(H_s):
         h_1_index = h_index % H_2.shape[0]
         h_2_index = h_index // H_2.shape[0]
@@ -355,20 +442,12 @@ def algorithm_1(X_1, X_2, labels, H_1, H_2, beta, delta, rng):
         error_list[h_s_index] = ((np.nonzero(h_1_pre - requested_labels)[0]).shape[0]) / budget
 
     best_hypothesis_H_s_indices = np.nonzero(error_list == np.amin(error_list))[0]
-    chosen_hypothesis_H_s_index = np.random.choice(best_hypothesis_H_s_indices)
+    # print(f"error_list: {error_list}")
+    return np.random.choice(best_hypothesis_H_s_indices)
 
-    print(f"error_list: {error_list}")
-
-    h_index = H_s[chosen_hypothesis_H_s_index]
-    h_1_index = h_index % H_2.shape[0]
-    h_2_index = h_index // H_2.shape[0]
-    h_1, h_2 = H_1[h_1_index, :], H_2[h_2_index, :]
-    error = cal_h_err(h_1, h_2, X_1, X_2, labels)
-
-    print(f"find h_out with error er(h_out) = {error}.")
-
-    return statistics_record
-    # return h_1, h_2
+#
+# def plot_error_vs_labeled_samples(H_s, budget, labels):
+#     for label_nums in range(budget):
 
 
 def plot_statistics(statistics_record):
@@ -434,7 +513,8 @@ def main():
 
     flip_labels(labels, flip_p, rng)
     beta = eps
-    statistics_record = algorithm_1(X_1, X_2, labels, H_1, H_2, beta, 1 - confidence, rng)
+    algorithm_1(X_1, X_2, labels, H_1, H_2, beta, 1 - confidence, rng)
+    # statistics_record = algorithm_1(X_1, X_2, labels, H_1, H_2, beta, 1 - confidence, rng)
     # plot_statistics(statistics_record)
 
 
